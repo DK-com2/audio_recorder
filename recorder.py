@@ -27,18 +27,50 @@ class AudioRecorder:
         
     def get_microphone_index(self):
         """マイクのインデックスを自動検出"""
+        # 利用可能な入力デバイスをリストアップ
+        input_devices = []
+        
         for i in range(self.audio.get_device_count()):
-            device_info = self.audio.get_device_info_by_index(i)
-            if self.config.MICROPHONE_NAME in device_info['name']:
-                logging.info(f"マイクが見つかりました: {device_info['name']} (index: {i})")
-                return i
-        logging.warning(f"指定されたマイクが見つかりません。デフォルトのindex {self.config.DEVICE_INDEX} を使用します")
-        return self.config.DEVICE_INDEX
+            try:
+                device_info = self.audio.get_device_info_by_index(i)
+                if device_info['maxInputChannels'] > 0:  # 入力可能なデバイス
+                    input_devices.append((i, device_info))
+                    logging.info(f"入力デバイス {i}: {device_info['name']} (チャンネル: {device_info['maxInputChannels']})")
+            except Exception as e:
+                logging.warning(f"デバイス {i} の情報取得エラー: {e}")
+        
+        if not input_devices:
+            logging.error("利用可能な入力デバイスが見つかりません")
+            return None
+        
+        # 指定されたマイク名で検索
+        for device_index, device_info in input_devices:
+            if self.config.MICROPHONE_NAME.lower() in device_info['name'].lower():
+                logging.info(f"指定マイクが見つかりました: {device_info['name']} (index: {device_index})")
+                return device_index
+        
+        # 指定マイクが見つからない場合は設定されたインデックスを確認
+        if self.config.DEVICE_INDEX < len(input_devices):
+            device_index, device_info = input_devices[self.config.DEVICE_INDEX]
+            if device_info['maxInputChannels'] > 0:
+                logging.info(f"デフォルトインデックス {self.config.DEVICE_INDEX} を使用: {device_info['name']}")
+                return device_index
+        
+        # 最初の入力デバイスを使用
+        device_index, device_info = input_devices[0]
+        logging.warning(f"最初の入力デバイスを使用: {device_info['name']} (index: {device_index})")
+        return device_index
     
     def record_to_mp3(self):
         """音声を直接MP3で録音"""
         try:
             device_index = self.get_microphone_index()
+            if device_index is None:
+                logging.error("使用可能なマイクデバイスがありません")
+                return False
+            
+            # バッファオーバーフロー対策でチャンクサイズを小さく
+            chunk_size = min(self.config.CHUNK, 1024)
             
             # pyaudioストリームを開く
             stream = self.audio.open(
@@ -47,10 +79,11 @@ class AudioRecorder:
                 channels=self.config.CHANNELS,
                 input_device_index=device_index,
                 input=True,
-                frames_per_buffer=self.config.CHUNK
+                frames_per_buffer=chunk_size,
+                start=False  # 手動でスタート
             )
             
-            logging.info(f"録音開始: {self.config.RECORD_SECONDS}秒間")
+            logging.info(f"録音開始: {self.config.RECORD_SECONDS}秒間 (チャンク: {chunk_size})")
             
             # ffmpegプロセスを開始（パイプ経由でリアルタイム変換）
             process = (
@@ -62,16 +95,27 @@ class AudioRecorder:
                 .run_async(pipe_stdin=True, quiet=True)
             )
             
-            total_frames = int((self.config.SAMPLE_RATE / self.config.CHUNK) * self.config.RECORD_SECONDS)
+            # 録音開始
+            stream.start_stream()
+            
+            total_frames = int((self.config.SAMPLE_RATE / chunk_size) * self.config.RECORD_SECONDS)
             
             for i in range(total_frames):
-                data = stream.read(self.config.CHUNK)
-                process.stdin.write(data)
-                
-                # 進捗表示（10%ごと）
-                if total_frames > 10 and i % (total_frames // 10) == 0:
-                    progress = (i / total_frames) * 100
-                    logging.info(f"録音進捗: {progress:.0f}%")
+                try:
+                    data = stream.read(chunk_size, exception_on_overflow=False)
+                    process.stdin.write(data)
+                    
+                    # 進捗表示（10%ごと）
+                    if total_frames > 10 and i % (total_frames // 10) == 0:
+                        progress = (i / total_frames) * 100
+                        logging.info(f"録音進捗: {progress:.0f}%")
+                        
+                except IOError as e:
+                    if e.errno == pyaudio.paInputOverflowed:
+                        logging.warning("バッファオーバーフローが発生しましたが、録音を継続します")
+                        continue
+                    else:
+                        raise
             
             # ストリームとプロセスを終了
             stream.stop_stream()

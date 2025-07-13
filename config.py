@@ -10,8 +10,8 @@ class Config:
     CHUNK = 4096           # バッファサイズ
     
     # デバイス設定
-    DEVICE_INDEX = 1       # マイクのデバイス番号
-    MICROPHONE_NAME = 'USB Microphone'  # 検索するマイク名
+    DEVICE_INDEX = 0       # マイクのデバイス番号（内蔵マイクの場合は0）
+    MICROPHONE_NAME = 'default'  # 検索するマイク名
     
     # ファイル設定
     RECORD_DIR = os.path.join(os.path.dirname(__file__), 'recordings')  # スクリプトと同じフォルダ内

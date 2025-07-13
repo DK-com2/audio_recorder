@@ -32,6 +32,7 @@ chmod +x run_recorder.sh
 chmod +x run_cron_manager.sh
 chmod +x setup_raspberry_pi.sh
 chmod +x config_changer.sh
+chmod +x check_audio_devices.sh
 
 echo ""
 echo "=== セットアップ完了 ==="
