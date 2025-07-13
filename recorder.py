@@ -133,13 +133,38 @@ class AudioRecorder:
             return False
     
     def upload_to_drive(self):
-        """Google Driveにアップロード"""
+        """Google Driveにアップロード（既存credentials.jsonを優先使用）"""
         try:
             logging.info("Google Driveアップロード開始")
             
-            # 認証
+            # 認証設定（credentials.jsonを優先使用）
             gauth = GoogleAuth()
-            gauth.LocalWebserverAuth()
+            
+            # 既存のcredentials.jsonがあるか確認
+            if os.path.exists('credentials.json'):
+                gauth.LoadCredentialsFile('credentials.json')
+                
+                # 認証情報が有効か確認
+                if gauth.credentials is None:
+                    # 認証情報が無効な場合のみ再認証
+                    logging.info("認証情報が無効のため再認証します")
+                    gauth.LocalWebserverAuth()
+                elif gauth.access_token_expired:
+                    # アクセストークンが期限切れの場合は更新
+                    logging.info("アクセストークンを更新します")
+                    gauth.Refresh()
+                else:
+                    # 有効な認証情報がある場合はそのまま使用
+                    logging.info("既存の認証情報を使用")
+            else:
+                # credentials.jsonがない場合のみ初回認証
+                logging.info("credentials.jsonがないため初回認証します")
+                gauth.LocalWebserverAuth()
+            
+            # 認証情報を保存
+            gauth.SaveCredentialsFile('credentials.json')
+            
+            # Google Driveオブジェクトを作成
             drive = GoogleDrive(gauth)
             
             # ファイル名を取得
