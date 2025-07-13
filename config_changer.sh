@@ -19,8 +19,13 @@ show_current_settings() {
     # 地点名を取得
     CURRENT_LOCATION=$(grep "LOCATION_NAME = " $CONFIG_FILE | sed "s/.*= '\([^']*\)'.*/\1/")
     
+    # デバイス設定を取得
+    CURRENT_DEVICE_INDEX=$(grep "DEVICE_INDEX = " $CONFIG_FILE | sed 's/.*= \([0-9]*\).*/\1/')
+    CURRENT_DEVICE_NAME=$(grep "MICROPHONE_NAME = " $CONFIG_FILE | sed "s/.*= '\([^']*\)'.*/\1/")
+    
     echo "録音時間: ${CURRENT_HOURS}時間${CURRENT_MINUTES}分 (${CURRENT_SECONDS}秒)"
     echo "地点名: ${CURRENT_LOCATION}"
+    echo "音声デバイス: Index ${CURRENT_DEVICE_INDEX} (${CURRENT_DEVICE_NAME})"
     echo ""
 }
 
@@ -68,7 +73,57 @@ change_record_time() {
     echo "設定を保存しました"
 }
 
-# 地点名を変更
+# 音声デバイスを変更
+change_audio_device() {
+    echo "音声デバイスの設定:"
+    echo "利用可能なデバイス:"
+    
+    # PyAudioデバイス一覧を表示
+    source venv/bin/activate 2>/dev/null
+    python3 -c "
+import pyaudio
+try:
+    p = pyaudio.PyAudio()
+    input_devices = []
+    for i in range(p.get_device_count()):
+        try:
+            info = p.get_device_info_by_index(i)
+            if info['maxInputChannels'] > 0:
+                input_devices.append((i, info))
+                print(f'{len(input_devices)}. Index {i}: {info[\"name\"]}')
+        except: pass
+    p.terminate()
+except Exception as e:
+    print(f'エラー: {e}')
+" 2>/dev/null
+    
+    echo ""
+    read -p "使用するデバイスの番号を選択してください (1-3): " device_choice
+    
+    case $device_choice in
+        1)
+            NEW_INDEX=1
+            NEW_NAME="USB Condenser Microphone"
+            ;;
+        2)
+            NEW_INDEX=2
+            NEW_NAME="pulse"
+            ;;
+        3)
+            NEW_INDEX=3
+            NEW_NAME="default"
+            ;;
+        *)
+            echo "無効な選択です"
+            return 1
+            ;;
+    esac
+    
+    # config.pyを更新
+    sed -i "s/DEVICE_INDEX = [0-9]*/DEVICE_INDEX = $NEW_INDEX/" $CONFIG_FILE
+    sed -i "s/MICROPHONE_NAME = '[^']*'/MICROPHONE_NAME = '$NEW_NAME'/" $CONFIG_FILE
+    echo "デバイスをIndex $NEW_INDEX ($NEW_NAME)に設定しました"
+}
 change_location() {
     echo "地点名の設定:"
     echo "現在の地点名: $(grep "LOCATION_NAME = " $CONFIG_FILE | sed "s/.*= '\([^']*\)'.*/\1/")"
@@ -103,11 +158,12 @@ main() {
     echo "変更したい項目を選択してください:"
     echo "1) 録音時間を変更"
     echo "2) 地点名を変更"
-    echo "3) 両方を変更"
-    echo "4) 設定を表示のみ"
-    echo "5) 終了"
+    echo "3) 音声デバイスを変更"
+    echo "4) すべてを変更"
+    echo "5) 設定を表示のみ"
+    echo "6) 終了"
     echo ""
-    read -p "選択してください (1-5): " main_choice
+    read -p "選択してください (1-6): " main_choice
     
     case $main_choice in
         1)
@@ -117,14 +173,19 @@ main() {
             change_location
             ;;
         3)
+            change_audio_device
+            ;;
+        4)
             change_record_time
             echo ""
             change_location
-            ;;
-        4)
-            echo "設定表示完了"
+            echo ""
+            change_audio_device
             ;;
         5)
+            echo "設定表示完了"
+            ;;
+        6)
             echo "終了します"
             exit 0
             ;;

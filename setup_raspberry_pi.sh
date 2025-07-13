@@ -29,10 +29,8 @@ mkdir -p recordings
 # スクリプトに実行権限を付与
 echo "6. スクリプトに実行権限を設定中..."
 chmod +x run_recorder.sh
-chmod +x run_cron_manager.sh
 chmod +x setup_raspberry_pi.sh
 chmod +x config_changer.sh
-chmod +x check_audio_devices.sh
 
 echo ""
 echo "=== セットアップ完了 ==="
@@ -47,15 +45,15 @@ echo "   ./config_changer.sh    # 録音時間と地点名を変更"
 echo ""
 echo "3. 実行方法:"
 echo "   手動実行: ./run_recorder.sh"
-echo "   cron管理: ./run_cron_manager.sh add '0 */1 * * *'"
 echo ""
 echo "4. 直接仮想環境で実行:"
 echo "   source venv/bin/activate"
 echo "   python recorder.py"
 echo ""
-echo "5. 定期実行設定:"
-echo "   ./run_cron_manager.sh add '0 */1 * * *'"
-echo "   ./run_cron_manager.sh list    # 一覧表示"
-echo "   ./run_cron_manager.sh remove  # 削除"
+echo "5. cron設定:"
+echo "   source venv/bin/activate"
+echo "   python cron_manager.py add '0 */1 * * *'"
+echo "   python cron_manager.py list    # 一覧表示"
+echo "   python cron_manager.py remove  # 削除"
 echo ""
 echo "注意: 実行時は必ず 'source venv/bin/activate' で仮想環境を有効化してください"
