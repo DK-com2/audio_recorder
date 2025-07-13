@@ -35,12 +35,28 @@ python setup.py
 
 ## 設定変更
 
+### 簡単設定変更（推奨）
+```bash
+./config_changer.sh
+```
+シェルスクリプトで録音時間と地点名を変更できます。
+
+### 手動設定変更
+
 `config.py`で以下の設定を変更できます：
 
 - `RECORD_SECONDS`: 録音時間（秒）
+- `LOCATION_NAME`: 地点名（ファイル名に含まれる）
 - `UPLOAD_FOLDER_ID`: Google Driveの保存先フォルダID
 - `DEVICE_INDEX`: マイクのデバイス番号
 - `RECORD_DIR`: 録音ファイルの保存先
+
+### ファイル名の形式
+生成されるファイル名: `OH1_2025_0713_1430_HOME.mp3`
+- `OH1_`: プレフィックス
+- `2025_0713_1430`: 年月日_時分
+- `HOME`: 地点名（設定可能）
+- `.mp3`: 拡張子
 
 ## 使用方法
 

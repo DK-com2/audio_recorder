@@ -16,6 +16,7 @@ class Config:
     # ファイル設定
     RECORD_DIR = os.path.join(os.path.dirname(__file__), 'recordings')  # スクリプトと同じフォルダ内
     FILE_PREFIX = 'OH1_'
+    LOCATION_NAME = 'HOME'  # 地点名（ファイル名に含まれる）
     
     # Google Drive設定
     UPLOAD_FOLDER_ID = 'your_google_drive_folder_id_here'
@@ -24,10 +25,11 @@ class Config:
     CRON_COMMAND = f'bash "{os.path.dirname(os.path.abspath(__file__))}/run_recorder.sh"'
     
     @staticmethod
-    def get_filename(extension='wav'):
-        """現在時刻を使ってファイル名を生成"""
+    def get_filename(extension='mp3'):
+        """現在時刻と地点名を使ってファイル名を生成"""
         dt_now = datetime.now()
-        filename = f"{Config.FILE_PREFIX}{dt_now.strftime('%Y_%m%d_%H%M')}.{extension}"
+        # フォーマット: OH1_2025_0713_1430_HOME.mp3
+        filename = f"{Config.FILE_PREFIX}{dt_now.strftime('%Y_%m%d_%H%M')}_{Config.LOCATION_NAME}.{extension}"
         return os.path.join(Config.RECORD_DIR, filename)
     
     @staticmethod
