@@ -20,8 +20,8 @@ class Config:
     # Google Drive設定
     UPLOAD_FOLDER_ID = 'your_google_drive_folder_id_here'
     
-    # cron設定用のコマンド
-    CRON_COMMAND = f'python "{os.path.dirname(os.path.abspath(__file__))}/recorder.py"'
+    # cron設定用のコマンド（仮想環境対応）
+    CRON_COMMAND = f'bash "{os.path.dirname(os.path.abspath(__file__))}/run_recorder.sh"'
     
     @staticmethod
     def get_filename(extension='wav'):
